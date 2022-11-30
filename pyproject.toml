@@ -1,0 +1,17 @@
+[build-system]
+requires = ["poetry"]
+
+[tool.poetry]
+name = "mumenrepo"
+description = "mumencoder shared code repo"
+version = "1.0.0a"
+authors = [ "mumencoder" ]
+repository = "https://github.com/mumencoder/mumenrepo"
+license = "MIT"
+packages = [{include = "mumenrepo", from = "src"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+psutil = "*"
+requests = "*"
+dominate = "*"
