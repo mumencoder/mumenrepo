@@ -1,5 +1,6 @@
 [build-system]
-requires = ["poetry"]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.poetry]
 name = "mumenrepo"
@@ -15,3 +16,6 @@ python = "^3.8"
 psutil = "*"
 requests = "*"
 dominate = "*"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.2"
