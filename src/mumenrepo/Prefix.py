@@ -32,6 +32,10 @@ class Prefix(object):
     def __delattr__(self, attr):
         cnode = object.__getattribute__(self, 'root')
         path = object.__getattribute__(self, 'path') + "." + attr
+        while path not in cnode.properties:
+            cnode = cnode.parent
+            if cnode is None:
+                raise Exception(f"Attribute {path} doesnt exist")
         del cnode.properties[path]
 
     def __repr__(self):

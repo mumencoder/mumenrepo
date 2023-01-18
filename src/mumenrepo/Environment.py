@@ -5,7 +5,6 @@ from .Prefix import *
 class Environment(object):
     def __init__(self, parent=None):
         self.properties = {}
-        self.branches = []
         self.event_handlers = {}
         self.parent = parent
         self.name = ""
@@ -80,11 +79,6 @@ class Environment(object):
         if node != "":
             yield node
 
-    def all_branches(self):
-        yield self
-        for branch in self.branches:
-            yield from branch.all_branches()
-
     def unique_properties(self):
         seen = set()
         for env in self.parent_chain():
@@ -141,6 +135,5 @@ class Environment(object):
 
     def branch(self):
         env = Environment()
-        self.branches.append( env )
         env.parent = self
         return env
