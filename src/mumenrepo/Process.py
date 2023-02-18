@@ -16,19 +16,21 @@ class Process(object):
     # This can only be called in an environment once, multiple runs with the same inputs must use a freshly branched environment
     @staticmethod
     async def shell(env):
-        env = env.branch()
         process = env.prefix('.process')
         shell = env.prefix('.shell')
 
+        if env.attr_exists('.process.instance'):
+            raise Exception(".process.instance already exists") 
+        env.attr.process.instance = None
+
+        if not env.attr_exists('.process.piped'):
+            process.piped = False
         if not env.attr_exists('.shell.env'):
             raise Exception(".shell.env not set")
         if not env.attr_exists('.process.stdout'):
             raise Exception(".process.stdout not set")
         if not env.attr_exists( ".process.stderr" ):
             process.stderr = process.stdout
-
-        if env.attr_exists('.process.instance'):
-            raise Exception(".process.instance already exists") 
 
         await env.send_event("process.initialize", env)
         try:
@@ -40,13 +42,22 @@ class Process(object):
             with Folder.Push( pushd ):
                 await env.send_event("process.starting", env)
                 process.start_time = time.time()
-                process.instance = await asyncio.create_subprocess_shell(shell.command, stdout=process.stdout, stderr=process.stderr, env=shell.env)
+                if process.piped:
+                    process.instance = await asyncio.create_subprocess_shell(shell.command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=shell.env)
+                else:
+                    process.instance = await asyncio.create_subprocess_shell(shell.command, stdout=process.stdout, stderr=process.stderr, env=shell.env)
                 await env.send_event("process.started", env)
 
                 if env.event_defined('process.wait'):
                     await env.send_event("process.wait", env)
                 else:
-                    await asyncio.wait_for(process.instance.wait(), timeout=None)
+                    while process.instance.returncode is None:
+                        if process.piped:
+                            (stdout, stderr) = await process.instance.communicate()
+                            process.stdout.write( stdout.decode('ascii') )
+                            process.stderr.write( stderr.decode('ascii') )
+                        await asyncio.sleep(0.1)
+
 
                 process.finish_time = time.time()
                 await env.send_event("process.finished", env)
