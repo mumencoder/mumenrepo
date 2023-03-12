@@ -56,7 +56,7 @@ class Process(object):
                             (stdout, stderr) = await process.instance.communicate()
                             process.stdout.write( stdout.decode('ascii') )
                             process.stderr.write( stderr.decode('ascii') )
-                        await asyncio.sleep(0.1)
+                        await asyncio.sleep(0.05)
 
 
                 process.finish_time = time.time()

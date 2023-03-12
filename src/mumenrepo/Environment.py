@@ -79,6 +79,10 @@ class Environment(object):
         if node != "":
             yield node
 
+    def local_properties(self):
+        for prop in self.properties:
+            yield prop
+
     def unique_properties(self):
         seen = set()
         for env in self.parent_chain():
@@ -87,6 +91,22 @@ class Environment(object):
                     continue
                 seen.add(prop)
                 yield prop
+
+    def __iter__(self):
+        for prop in self.unique_properties():
+            yield prop, self.get_attr(prop)
+
+    def rebase(self, old_base, new_base, prop, new_env=None, copy=False):
+        if prop.startswith(old_base):
+            oldv = self.get_attr(prop)
+            if copy is False:
+                self.del_attr(prop)
+            new_prop = new_base + prop[len(old_base):]
+            if new_env is None:
+                new_env = self
+            new_env.set_attr(new_prop, oldv)
+        else:
+            raise Exception("prop is not prefixed by old_base")
 
     def filter_properties(self, re_filter):
         re_filter = re_filter.replace(".", "\.")
@@ -108,6 +128,15 @@ class Environment(object):
                 return default
         return self.properties[path]
 
+    def del_attr(self, path, local=False):
+        if local is True:
+            del self.properties[path]
+        while path not in self.properties:
+            self = self.parent
+            if self is None:
+                raise Exception("property not found")
+        del self.properties[path]
+    
     def attr_exists(self, path, local=False):
         if local is True:
             return path in self.properties
