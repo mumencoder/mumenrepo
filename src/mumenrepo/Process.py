@@ -54,10 +54,9 @@ class Process(object):
                     while process.instance.returncode is None:
                         if process.piped:
                             (stdout, stderr) = await process.instance.communicate()
-                            process.stdout.write( stdout.decode('ascii') )
-                            process.stderr.write( stderr.decode('ascii') )
+                            process.stdout.write( stdout.decode('cp437') )
+                            process.stderr.write( stderr.decode('cp437') )
                         await asyncio.sleep(0.05)
-
 
                 process.finish_time = time.time()
                 await env.send_event("process.finished", env)
