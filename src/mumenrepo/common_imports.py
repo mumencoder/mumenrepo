@@ -9,6 +9,7 @@ import subprocess, psutil
 import pathlib
 import time, datetime
 import json
+import io
 import random
 import string, re, textwrap
 import requests

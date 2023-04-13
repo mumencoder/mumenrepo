@@ -7,6 +7,16 @@ from .Workflow import *
 
 class Git(object):
     class Repo(object):
+        @staticmethod
+        async def command(env, command):
+            env.attr.process.stdout = io.StringIO()
+            env.attr.process.stderr = env.attr.process.stdout
+            env.attr.process.piped = True
+
+            env.attr.shell.dir = env.attr.git.repo.dir
+            env.attr.shell.command = command
+            await Process.shell(env)
+            
         @staticmethod 
         async def clone(env):
             cmd = "git clone "
@@ -18,24 +28,60 @@ class Git(object):
                 raise Exception("URL not set for ensure")
             cmd += f"{env.attr.git.repo.url} {env.attr.git.repo.dir} "
             penv = env.branch()
-            penv.attr.shell.command = cmd
-            await Process.shell(penv)
+            await Git.Repo.command(penv, cmd)
 
         @staticmethod
-        def exists(env):
-            if not os.path.exists(env.attr.git.repo.dir):
-                return False
-            with Folder.Push(env.attr.git.repo.dir):
-                process = subprocess.run('git status', stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, shell=True)
-                if process.returncode == 0:
-                    return True
+        async def status(env):
+            cmd = "git status -b --porcelain=v2"
+            penv = env.branch()
+            await Git.Repo.command(penv, cmd)
+            if penv.attr.process.instance.returncode != 0:
+                return None
+            result = {}
+            for line in penv.attr.process.stdout.getvalue().split('\n'):
+                if line.startswith("#"):
+                    sline = line.split(' ')
+                    if len(sline[2:]) == 1:
+                        result[sline[1]] = sline[2]
+                    else:
+                        result[sline[1]] = sline[2:]
+            return result
+
+        @staticmethod
+        async def submodule_status(env):
+            penv = env.branch()
+            cmd = "git submodule status "
+            await Git.Repo.command(penv, cmd)
+            result = {}
+            for line in penv.attr.process.stdout.getvalue().split('\n'):
+                if len(line) == 0:
+                    continue
+                sline = line.split(' ')
+                if line[0] == "-":
+                    result[sline[0][1:]] = "missing"
                 else:
-                    return False
+                    result[sline[1]] = "ready"
+            return result
 
         @staticmethod
-        async def ensure(env):
-            if not Git.Repo.exists(env):
-                Git.Repo.clone(env)
+        async def pull(env):
+            cmd = "git fetch"
+            penv = env.branch()
+            await Git.Repo.command(penv, cmd)
+
+        @staticmethod
+        async def pull(env):
+            cmd = "git pull"
+            penv = env.branch()
+            await Git.Repo.command(penv, cmd)
+
+        @staticmethod
+        async def init_all_submodules(env):
+            penv = env.branch()
+            cmd = "git submodule update --init --recursive "
+            if penv.attr_exists(".git.repo.submodule_ref"):
+                cmd += f"--reference {penv.attr.git.repo.submodule_ref} "
+            await Git.Repo.command(penv, cmd)
 
         @staticmethod 
         def commit_history(commit, depth=32):
@@ -52,21 +98,6 @@ class Git(object):
                 if len(q) == 0:
                     return
                 commit = q.pop(0)
-
-        @staticmethod
-        async def command(env, command):
-            env = env.branch()
-            env.attr.shell.dir = env.attr.git.repo.dir
-            env.attr.shell.command = command
-            await Process.shell(env)
-
-        @staticmethod
-        async def init_all_submodules(env):
-            env = env.branch()
-            cmd = "git submodule update --init --recursive "
-            if env.attr_exists(".git.repo.submodule_ref"):
-                cmd += f"--reference {env.attr.git.repo.submodule_ref} "
-            await Git.Repo.command(env, cmd)
 
         #await Shared.Git.Repo.command(senv, 'git submodule deinit -f --all')
         #await Shared.Git.Repo.command(senv, 'git clean -fdx')
