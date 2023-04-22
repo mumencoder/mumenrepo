@@ -9,10 +9,6 @@ class Git(object):
     class Repo(object):
         @staticmethod
         async def command(env, command):
-            env.attr.process.stdout = io.StringIO()
-            env.attr.process.stderr = env.attr.process.stdout
-            env.attr.process.piped = True
-
             env.attr.shell.dir = env.attr.git.repo.dir
             env.attr.shell.command = command
             await Process.shell(env)

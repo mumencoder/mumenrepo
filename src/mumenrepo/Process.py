@@ -23,14 +23,17 @@ class Process(object):
             raise Exception(".process.instance already exists") 
         env.attr.process.instance = None
 
-        if not env.attr_exists('.process.piped'):
-            process.piped = False
         if not env.attr_exists('.shell.env'):
             raise Exception(".shell.env not set")
         if not env.attr_exists('.process.stdout'):
             raise Exception(".process.stdout not set")
         if not env.attr_exists( ".process.stderr" ):
             process.stderr = process.stdout
+            process.stderr_mode = "combined"
+        if not env.attr_exists( ".process.stdout_mode"):
+            raise Exception(".process.stdout_mode not set")
+        if not env.attr_exists( ".process.stderr_mode"):
+            raise Exception(".process.stderr_mode not set")
 
         await env.send_event("process.initialize", env)
         try:
@@ -42,21 +45,30 @@ class Process(object):
             with Folder.Push( pushd ):
                 await env.send_event("process.starting", env)
                 process.start_time = time.time()
-                if process.piped:
-                    process.instance = await asyncio.create_subprocess_shell(shell.command, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE, env=shell.env)
+                if process.stdout_mode == "piped":
+                    stdout_arg = asyncio.subprocess.PIPE
                 else:
-                    process.instance = await asyncio.create_subprocess_shell(shell.command, stdout=process.stdout, stderr=process.stderr, env=shell.env)
+                    stdout_arg = process.stdout
+                if process.stderr_mode == "piped":
+                    stderr_arg = asyncio.subprocess.PIPE
+                else:
+                    stderr_arg = process.stderr
+
+                process.instance = await asyncio.create_subprocess_shell(shell.command, stdout=stdout_arg, stderr=stderr_arg, env=shell.env)
                 await env.send_event("process.started", env)
 
                 if env.event_defined('process.wait'):
                     await env.send_event("process.wait", env)
                 else:
                     while process.instance.returncode is None:
-                        if process.piped:
-                            (stdout, stderr) = await process.instance.communicate()
-                            process.stdout.write( stdout.decode('cp437') )
-                            process.stderr.write( stderr.decode('cp437') )
-                        await asyncio.sleep(0.05)
+                        try:
+                            (stdout, stderr) = await process.instance.communicate(timeout=0.05)
+                            if stdout is not None:
+                                process.stdout.write( stdout.decode('cp437') )
+                            if stderr is not None:
+                                process.stderr.write( stderr.decode('cp437') )
+                        except subprocess.TimeoutExpired:
+                            pass
 
                 process.finish_time = time.time()
                 await env.send_event("process.finished", env)
