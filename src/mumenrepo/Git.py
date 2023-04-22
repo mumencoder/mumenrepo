@@ -23,18 +23,18 @@ class Git(object):
             if not env.attr_exists('.git.repo.url'):
                 raise Exception("URL not set for ensure")
             cmd += f"{env.attr.git.repo.url} {env.attr.git.repo.dir} "
-            penv = env.branch()
-            await Git.Repo.command(penv, cmd)
+            await Git.Repo.command(env, cmd)
 
         @staticmethod
         async def status(env):
             cmd = "git status -b --porcelain=v2"
             penv = env.branch()
+            Process.pipe_stdout(penv)
             await Git.Repo.command(penv, cmd)
             if penv.attr.process.instance.returncode != 0:
                 return None
             result = {}
-            for line in penv.attr.process.stdout.getvalue().split('\n'):
+            for line in penv.attr.process.stdout.getvalue().decode('ascii').split('\n'):
                 if line.startswith("#"):
                     sline = line.split(' ')
                     if len(sline[2:]) == 1:
@@ -47,9 +47,10 @@ class Git(object):
         async def submodule_status(env):
             penv = env.branch()
             cmd = "git submodule status "
+            Process.pipe_stdout(penv)
             await Git.Repo.command(penv, cmd)
             result = {}
-            for line in penv.attr.process.stdout.getvalue().split('\n'):
+            for line in penv.attr.process.stdout.getvalue().decode('ascii').split('\n'):
                 if len(line) == 0:
                     continue
                 sline = line.split(' ')

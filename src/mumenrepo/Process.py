@@ -29,7 +29,7 @@ class Process(object):
             raise Exception(".process.stdout not set")
         if not env.attr_exists( ".process.stderr" ):
             process.stderr = process.stdout
-            process.stderr_mode = "combined"
+            process.stderr_mode = process.stdout_mode
         if not env.attr_exists( ".process.stdout_mode"):
             raise Exception(".process.stdout_mode not set")
         if not env.attr_exists( ".process.stderr_mode"):
@@ -62,11 +62,11 @@ class Process(object):
                 else:
                     while process.instance.returncode is None:
                         try:
-                            (stdout, stderr) = await process.instance.communicate(timeout=0.05)
+                            (stdout, stderr) = await process.instance.communicate()
                             if stdout is not None:
-                                process.stdout.write( stdout.decode('cp437') )
+                                process.stdout.write( stdout )
                             if stderr is not None:
-                                process.stderr.write( stderr.decode('cp437') )
+                                process.stderr.write( stderr )
                         except subprocess.TimeoutExpired:
                             pass
 
@@ -75,6 +75,11 @@ class Process(object):
         finally:
             await env.send_event("process.cleanup")
 
+    def pipe_stdout(env):
+        env.attr.process.stdout = io.BytesIO()
+        env.attr.process.stderr = env.attr.process.stdout
+        env.attr.process.stdout_mode = "piped"
+        env.attr.process.stderr_mode = "piped"  
     class Manager(object):
         def __init__(self, config):
             self.max_memory_usage = -1
