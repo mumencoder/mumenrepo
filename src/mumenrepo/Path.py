@@ -3,7 +3,7 @@ from .common_imports import *
 from .Process import *
 
 class Path(type(pathlib.Path())):
-    def __init__(self, path):
+    def __init__(self, path, *args):
         self.ensure_parent_folder()
 
     def __add__(self, path):

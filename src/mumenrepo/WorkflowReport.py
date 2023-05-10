@@ -33,12 +33,12 @@ class WorkflowReport(object):
                 elif entry['type'] == "shell":
                     penv = entry['env']
                     pre(code( "shell command: " + penv.attr.shell.command ) )
-                    if penv.attr_exists(".shell.dir"):
+                    if penv.has_attr(".shell.dir"):
                         pre(code( "working dir: " + str(penv.attr.shell.dir) ) )
-                    if penv.attr_exists(".process.log_path"):
+                    if penv.has_attr(".process.log_path"):
                         a( "<Log>", href=f'../../{os.path.relpath(penv.attr.process.log_path, penv.attr.dirs.root)}')
                     br()
-                    if penv.attr_exists('.process.p'):
+                    if penv.has_attr('.process.p'):
                         pre(code( "result: " + str(penv.attr.process.p.returncode) ))
         return doc
 

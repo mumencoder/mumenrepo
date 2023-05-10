@@ -19,31 +19,31 @@ class Process(object):
         process = env.prefix('.process')
         shell = env.prefix('.shell')
 
-        if env.attr_exists('.process.instance'):
+        if env.has_attr('.process.instance'):
             raise Exception(".process.instance already exists") 
         env.attr.process.instance = None
 
-        if not env.attr_exists('.shell.env'):
+        if not env.has_attr('.shell.env'):
             raise Exception(".shell.env not set")
-        if not env.attr_exists('.process.stdout'):
+        if not env.has_attr('.process.stdout'):
             raise Exception(".process.stdout not set")
-        if not env.attr_exists( ".process.stderr" ):
+        if not env.has_attr( ".process.stderr" ):
             process.stderr = process.stdout
             process.stderr_mode = process.stdout_mode
-        if not env.attr_exists( ".process.stdout_mode"):
+        if not env.has_attr( ".process.stdout_mode"):
             raise Exception(".process.stdout_mode not set")
-        if not env.attr_exists( ".process.stderr_mode"):
+        if not env.has_attr( ".process.stderr_mode"):
             raise Exception(".process.stderr_mode not set")
 
-        await env.send_event("process.initialize", env)
+        #await env.send_event("process.initialize", env)
         try:
-            if env.attr_exists( ".shell.dir" ):
+            if env.has_attr( ".shell.dir" ):
                 pushd = shell.dir
             else:
                 pushd = os.getcwd()
 
             with Folder.Push( pushd ):
-                await env.send_event("process.starting", env)
+                #await env.send_event("process.starting", env)
                 process.start_time = time.time()
                 if process.stdout_mode == "piped":
                     stdout_arg = asyncio.subprocess.PIPE
@@ -55,10 +55,12 @@ class Process(object):
                     stderr_arg = process.stderr
 
                 process.instance = await asyncio.create_subprocess_shell(shell.command, stdout=stdout_arg, stderr=stderr_arg, env=shell.env)
-                await env.send_event("process.started", env)
+                #await env.send_event("process.started", env)
 
-                if env.event_defined('process.wait'):
-                    await env.send_event("process.wait", env)
+                if False:
+                    pass
+                #if env.event_defined('process.wait'):
+                    #await env.send_event("process.wait", env)
                 else:
                     while process.instance.returncode is None:
                         try:
@@ -71,9 +73,10 @@ class Process(object):
                             pass
 
                 process.finish_time = time.time()
-                await env.send_event("process.finished", env)
+                #await env.send_event("process.finished", env)
         finally:
-            await env.send_event("process.cleanup")
+            pass
+            #await env.send_event("process.cleanup")
 
     def pipe_stdout(env):
         env.attr.process.stdout = io.BytesIO()

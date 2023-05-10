@@ -16,22 +16,24 @@ class Git(object):
         @staticmethod 
         async def clone(env):
             cmd = "git clone "
-            if env.attr_exists('.git.repo.clone.depth'):
+            if env.has_attr('.git.repo.clone.depth'):
                 cmd += f"--depth {env.attr.git.repo.clone.depth} "
-            if env.attr_exists('.git.repo.clone.branch'):
+            if env.has_attr('.git.repo.clone.branch'):
                 cmd += f"--branch {env.attr.git.repo.clone.branch} "
-            if not env.attr_exists('.git.repo.url'):
+            if not env.has_attr('.git.repo.url'):
                 raise Exception("URL not set for ensure")
             cmd += f"{env.attr.git.repo.url} {env.attr.git.repo.dir} "
             await Git.Repo.command(env, cmd)
 
         @staticmethod
-        async def status(env):
+        async def status(env, verbose=False):
             cmd = "git status -b --porcelain=v2"
             penv = env.branch()
             Process.pipe_stdout(penv)
             await Git.Repo.command(penv, cmd)
             if penv.attr.process.instance.returncode != 0:
+                if verbose:
+                    print( penv.attr.process.stdout.getvalue() )
                 return None
             result = {}
             for line in penv.attr.process.stdout.getvalue().decode('ascii').split('\n'):
@@ -76,7 +78,7 @@ class Git(object):
         async def init_all_submodules(env):
             penv = env.branch()
             cmd = "git submodule update --init --recursive "
-            if penv.attr_exists(".git.repo.submodule_ref"):
+            if penv.has_attr(".git.repo.submodule_ref"):
                 cmd += f"--reference {penv.attr.git.repo.submodule_ref} "
             await Git.Repo.command(penv, cmd)
 
@@ -128,7 +130,7 @@ class Git(object):
 
             Git.Repo.resolve_head(env)
 
-            if env.attr_exists('.git.repo.remote'):
+            if env.has_attr('.git.repo.remote'):
                 remote = repo.remote( git.remote.name )
                 if git.branch.name not in remote.refs:
                     remote.fetch( git.branch.name )
@@ -137,7 +139,7 @@ class Git(object):
 
             repo.head.reset( git.branch.name, working_tree=True )
 
-            if env.attr_exists('.git.repo.remote'):
+            if env.has_attr('.git.repo.remote'):
                 if repo.head.commit != remote.refs[git.branch.name].commit:
                     raise Exception("repo head mismatch")
 

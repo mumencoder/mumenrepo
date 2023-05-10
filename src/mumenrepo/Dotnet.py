@@ -45,7 +45,7 @@ class Dotnet(object):
         async def build(env):
             params = env.get('.dotnet.build.params', {})
             cmd = f"dotnet build "
-            if env.attr_exists('.dotnet.build.output_dir'):
+            if env.has_attr('.dotnet.build.output_dir'):
                 cmd += f"-o {env.attr.dotnet.build.output_dir} "
             cmd += "-clp:ErrorsOnly "
             cmd += f"{env.attr.dotnet.project.path} {Dotnet.Project.flatten_build_params(params)}"
@@ -56,7 +56,7 @@ class Dotnet(object):
         async def publish(env):
             params = env.get('.dotnet.build.params', {})
             cmd = f"dotnet publish " 
-            if env.attr_exists('.dotnet.build.output_dir'):
+            if env.has_attr('.dotnet.build.output_dir'):
                 cmd += f"-o {env.attr.dotnet.build.output_dir} "
             cmd += "-c Release --runtime linux-x64 "
             cmd += "-clp:ErrorsOnly -p:ErrorOnDuplicatePublishOutputFiles=false -p:ValidateExecutableReferencesMatchSelfContained=false "
