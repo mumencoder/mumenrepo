@@ -4,6 +4,7 @@ from .AWS import *
 from .DirectedGraph import *
 from .Dotnet import *
 from .Environment import *
+from .Event import *
 from .File import *
 from .Folder import *
 from .Git import *

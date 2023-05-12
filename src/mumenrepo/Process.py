@@ -35,15 +35,12 @@ class Process(object):
         if not env.has_attr( ".process.stderr_mode"):
             raise Exception(".process.stderr_mode not set")
 
-        #await env.send_event("process.initialize", env)
+        await env.attr.process.events.send_event("process.initialize", env)
         try:
-            if env.has_attr( ".shell.dir" ):
-                pushd = shell.dir
-            else:
-                pushd = os.getcwd()
+            if not env.has_attr( ".shell.dir" ):
+                shell.dir = os.getcwd()
 
-            with Folder.Push( pushd ):
-                #await env.send_event("process.starting", env)
+            with Folder.Push( shell.dir ):
                 process.start_time = time.time()
                 if process.stdout_mode == "piped":
                     stdout_arg = asyncio.subprocess.PIPE
@@ -54,35 +51,46 @@ class Process(object):
                 else:
                     stderr_arg = process.stderr
 
+                await env.attr.process.events.send_event("process.starting", env)
                 process.instance = await asyncio.create_subprocess_shell(shell.command, stdout=stdout_arg, stderr=stderr_arg, env=shell.env)
-                #await env.send_event("process.started", env)
+                await env.attr.process.events.send_event("process.started", env)
 
-                if False:
-                    pass
-                #if env.event_defined('process.wait'):
-                    #await env.send_event("process.wait", env)
-                else:
-                    while process.instance.returncode is None:
-                        try:
-                            (stdout, stderr) = await process.instance.communicate()
-                            if stdout is not None:
-                                process.stdout.write( stdout )
-                            if stderr is not None:
-                                process.stderr.write( stderr )
-                        except subprocess.TimeoutExpired:
-                            pass
+                while process.instance.returncode is None:
+                    await env.attr.process.events.send_event("process.waiting", env)
+                    if env.has_attr('.process.try_terminate'):
+                        kill_proc = await env.attr.process.try_terminate(env)
+                        if kill_proc:
+                            process.instance.kill()
+                    try:
+                        await asyncio.wait_for( process.instance.wait(), timeout=0.05 )
+                    except asyncio.TimeoutError:
+                        pass
+                    #try:
+                    #    co = process.instance.communicate()
+                    #    (stdout, stderr) = await asyncio.wait_for( co, timeout=0.05)
+                    #    if stdout is not None:
+                    #        process.stdout.write( stdout )
+                    #    if stderr is not None:
+                    #        process.stderr.write( stderr )
+                    #except asyncio.TimeoutError:
+                    #    pass
+
+                if process.stdout_mode == "piped":
+                    process.stdout.write( await process.instance.stdout.read() )
+                if process.stderr_mode == "piped":
+                    process.stderr.write( await process.instance.stderr.read() )
 
                 process.finish_time = time.time()
-                #await env.send_event("process.finished", env)
+                await env.attr.process.events.send_event("process.finished", env)
         finally:
-            pass
-            #await env.send_event("process.cleanup")
+            await env.attr.process.events.send_event("process.cleanup")
 
     def pipe_stdout(env):
         env.attr.process.stdout = io.BytesIO()
         env.attr.process.stderr = env.attr.process.stdout
         env.attr.process.stdout_mode = "piped"
         env.attr.process.stderr_mode = "piped"  
+
     class Manager(object):
         def __init__(self, config):
             self.max_memory_usage = -1
