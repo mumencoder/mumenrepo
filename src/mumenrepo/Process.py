@@ -52,7 +52,11 @@ class Process(object):
                     stderr_arg = process.stderr
 
                 await env.attr.process.events.send_event("process.starting", env)
-                process.instance = await asyncio.create_subprocess_shell(shell.command, stdout=stdout_arg, stderr=stderr_arg, env=shell.env)
+                if env.has_attr('.shell.command'):
+                    process.instance = await asyncio.create_subprocess_shell(shell.command, stdout=stdout_arg, stderr=stderr_arg, env=shell.env)
+                else:
+                    process.instance = await asyncio.create_subprocess_exec(shell.program, *shell.args, stdout=stdout_arg, stderr=stderr_arg, env=shell.env)
+                    
                 await env.attr.process.events.send_event("process.started", env)
 
                 while process.instance.returncode is None:
@@ -61,6 +65,7 @@ class Process(object):
                         kill_proc = await env.attr.process.try_terminate(env)
                         if kill_proc:
                             process.instance.kill()
+                            await process.instance.wait()
                     try:
                         await asyncio.wait_for( process.instance.wait(), timeout=0.05 )
                     except asyncio.TimeoutError:

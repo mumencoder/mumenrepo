@@ -63,7 +63,53 @@ class Git(object):
             return result
 
         @staticmethod
-        async def pull(env):
+        async def status_code(env):
+            if not os.path.exists(env.attr.git.repo.dir):
+                return "missing"
+            
+            if not os.path.exists( f"{env.attr.git.repo.dir}/.git" ):
+                return "missing"
+
+            status = await Git.Repo.status(env, verbose=True)
+            env.attr.git.status = status
+
+            if status is None:
+                return "status_error"
+            
+            if int(status['branch.ab'][0]) == 0 and int(status['branch.ab'][1]) == -1:
+                return "behind_upstream"
+
+            sstatus = await Git.Repo.submodule_status(env)
+            for name, state in sstatus.items():
+                if state == 'missing':
+                    return "submodule_missing"
+            
+            return "ready"
+        
+        @staticmethod
+        async def freshen(base_env):
+            status = None
+            while status != "ready":
+                env = base_env.branch()
+
+                last_status = status
+                status = env.attr.git.status
+                
+                if last_status == status:
+                    raise Exception("no status change", status)
+
+                if status == "status_error":
+                    raise Exception(status)
+                elif status == "missing":
+                    await Git.Repo.clone(env)
+                elif status == "behind_upstream":
+                    await Git.Repo.fetch(env)
+                elif status == "submodule_missing":
+                    await Git.Repo.init_all_submodules(env)
+                else:
+                    raise Exception("unknown status", status)
+        @staticmethod
+        async def fetch(env):
             cmd = "git fetch"
             penv = env.branch()
             await Git.Repo.command(penv, cmd)

@@ -8,7 +8,7 @@ import traceback, inspect
 import subprocess, psutil
 import pathlib
 import time, datetime
-import json
+import json, pickle
 import io
 import random
 import string, re, textwrap
