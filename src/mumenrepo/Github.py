@@ -3,20 +3,22 @@ from .common_imports import *
 
 class Github(object):
     @staticmethod
-    def prepare(env):
-        github = env.prefix('.github')
-        github.endpoint = 'api.github.com'
-        github.url = f'https://github.com/{github.owner}/{github.repo}'
-        github.repo_id = f'{github.repo}.{github.owner}'
-        env.attr.git.repo.url = github.url
+    def official_endpoint(env):
+        env.attr.github.endpoint = 'api.github.com'
 
     @staticmethod
     def base_header(env):
         env.github.request.headers = {'Accept': 'application/vnd.github.v3+json'}
 
     @staticmethod 
-    def make_request(env, url):
-        env.github.request.result = requests.get(url, headers=env.github.request.headers)
+    def make_request(env, url, last_result=None):
+        if last_result is not None and int(last_result.headers['X-RateLimit-Remaining']) <= 1:
+            time_wait = float(last_result.headers['X-RateLimit-Reset']) - time.time() + 2.0
+            if time_wait < 0:
+                time.sleep( 120.0 )
+            else:
+                time.sleep( time_wait )
+        return requests.get(url, headers=env.github.request.headers)
 
     @staticmethod
     def list_pull_requests(env):
@@ -26,6 +28,25 @@ class Github(object):
     @staticmethod
     def get_pull_request(env):
         url = f'https://{env.attr.github.endpoint}/repos/{env.attr.github.owner}/{env.attr.github.repo}/pulls/{env.attr.github.number}'
+        return Github.make_request(env, url)
+
+    @staticmethod
+    def search_topic_default_params():
+        return {"per_page":100, "sort":"stars"}
+
+    @staticmethod
+    def generate_topic_pages(env, total_counts, per_page=100):
+        for i in range(1, 11):
+            yield i
+            if (i * per_page) > total_counts:
+                break
+
+    @staticmethod
+    def search_topic(self, env, **kwargs):
+        q = {'q': f"{kwargs['q']}+in:topics"}
+        q.update(kwargs)
+        qs = urllib.parse.urlencode(q)
+        url = urllib.parse.quote(f"https://{env.attr.github.endpoint}/search/repositories?{qs}")
         return Github.make_request(env, url)
 
     @staticmethod

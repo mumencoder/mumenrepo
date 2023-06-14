@@ -12,7 +12,7 @@ import json, pickle
 import io
 import random
 import string, re, textwrap
-import requests
+import requests, urllib
 
 import dominate as dom
 import dominate.tags

@@ -93,12 +93,14 @@ class Git(object):
                 env = base_env.branch()
 
                 last_status = status
-                status = env.attr.git.status
+                status = await Git.Repo.status_code(env)
                 
                 if last_status == status:
                     raise Exception("no status change", status)
 
-                if status == "status_error":
+                if status == "ready":
+                    pass
+                elif status == "status_error":
                     raise Exception(status)
                 elif status == "missing":
                     await Git.Repo.clone(env)
@@ -108,6 +110,7 @@ class Git(object):
                     await Git.Repo.init_all_submodules(env)
                 else:
                     raise Exception("unknown status", status)
+                
         @staticmethod
         async def fetch(env):
             cmd = "git fetch"
@@ -214,12 +217,6 @@ class Git(object):
                 repo.remote(env.attr.git.remote).fetch( env.attr.git.commit )
             env.attr.git.api.commit = repo.commit( env.attr.git.commit )
             
-        @staticmethod
-        async def freshen(env):
-            repo = env.attr.git.api.repo
-            repo.head.reset( 'origin/HEAD', working_tree=True )
-            repo.remote('origin').pull()
-
     class AutoStash(object):
         def __init__(self, env):
             self.env = env

@@ -56,7 +56,7 @@ class Process(object):
                     process.instance = await asyncio.create_subprocess_shell(shell.command, stdout=stdout_arg, stderr=stderr_arg, env=shell.env)
                 else:
                     process.instance = await asyncio.create_subprocess_exec(shell.program, *shell.args, stdout=stdout_arg, stderr=stderr_arg, env=shell.env)
-                    
+
                 await env.attr.process.events.send_event("process.started", env)
 
                 while process.instance.returncode is None:
@@ -64,8 +64,16 @@ class Process(object):
                     if env.has_attr('.process.try_terminate'):
                         kill_proc = await env.attr.process.try_terminate(env)
                         if kill_proc:
-                            process.instance.kill()
-                            await process.instance.wait()
+                            process.instance.terminate()
+                            try:
+                                await asyncio.wait_for( process.instance.wait(), timeout=2.0 )
+                            except asyncio.TimeoutError:
+                                pass
+                            try:
+                                process.instance.kill()
+                                await process.instance.wait()
+                            except:
+                                pass
                     try:
                         await asyncio.wait_for( process.instance.wait(), timeout=0.05 )
                     except asyncio.TimeoutError:
@@ -96,6 +104,21 @@ class Process(object):
         env.attr.process.stdout_mode = "piped"
         env.attr.process.stderr_mode = "piped"  
 
+    @staticmethod
+    def limited_process(env, memory_limit=None, time_limit=None):
+        if memory_limit:
+            try:
+                meminfo = psutil.Process( env.attr.process.instance.pid ).memory_info()
+                if meminfo.rss > memory_limit:
+                    return True
+            except psutil.NoSuchProcess:
+                pass
+        if time_limit:
+            if time.time() - env.attr.process.start_time > time_limit:
+                return True
+        else:
+            return False
+        
     class Manager(object):
         def __init__(self, config):
             self.max_memory_usage = -1

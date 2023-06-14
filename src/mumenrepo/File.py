@@ -1,26 +1,33 @@
 
 from .common_imports import *
 from .Prefix import *
-
-def get_file(filename, default_value=None):
-    if not os.path.exists(filename):
-        return default_value
-    with open(filename, "rb") as f:
-        return f.read()
-
-def put_file(filename, data):
-    with open(filename, "wb") as f:
-        f.write(data)
-
-def maybe_from_pickle(data, default_value=None):
-    try:
-        return pickle.loads(data)
-    except:
-        return default_value
     
 class File(type(pathlib.Path())):
     def __init__(self, *args, **kwargs):
         self.ensure_folder()
+
+    def get_file(filename, default_value=None, mode="rb"):
+        if not os.path.exists(filename):
+            return default_value
+        with open(filename, mode) as f:
+            return f.read()
+
+    def safe_rewrite(filename, data):
+        with open( filename + '.tmp', "wb") as f:
+            f.write( pickle.dumps( stardata ) )    
+        if os.path.exists(filename):  
+            os.remove( filename )
+        os.rename( filename + '.tmp', filename )
+
+    def put_file(filename, data, mode="wb"):
+        with open(filename, mode) as f:
+            f.write(data)
+
+    def maybe_from_pickle(data, default_value=None):
+        try:
+            return pickle.loads(data)
+        except:
+            return default_value
 
     def ensure_folder(self):
         if not self.parent.exists():
